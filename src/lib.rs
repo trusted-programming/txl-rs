@@ -30,26 +30,46 @@ const URL: &str = "http://txl.ca/download/11888-Txl108bwin64.zip";
 const EXE: &str = ".exe";
 
 #[cfg(all())]
+fn get_file_arg_ext(args: Vec<String>) -> (String, String) {
+    let file_args: Vec<&String> = args
+        .iter()
+        .filter(|x| std::path::PathBuf::from(x).exists())
+        .collect();
+    let mut ext = "";
+    if !file_args.is_empty() {
+        ext = file_args[0];
+    }
+    if let Some(ex) = Path::new(ext).extension() {
+        let ex_str = ex.to_string_lossy();
+        let grammar = lang_to_grammar(&ex_str);
+        (ex_str.to_string(), grammar.to_string())
+    } else {
+        ("".to_string(), "".to_string())
+    }
+}
+
 /// .
 ///
 /// # Errors
 ///
 /// This function will return an error if the txl command is not found.
 pub fn txl(args: Vec<String>) -> Result<String, Error> {
+    use std::path::PathBuf;
     let mut my_args = args.clone();
     let cmd = format!("{FOLDER}/bin/txl{EXE}");
     if Path::new(&cmd).exists() {
-        if let Ok(paths) = std::fs::read_dir(format!("{FOLDER}/lib/")) {
-            for entry in paths {
-                if let Ok(entry_ok) = entry.as_ref() {
-                    if let Ok(file_type) = entry_ok.file_type() {
-                        if file_type.is_dir() {
-                            let p = &entry_ok.file_name();
-                            let s = &p.to_string_lossy();
-                            my_args.push("-i".to_string());
-                            my_args.push(format!("{}/lib/{}", FOLDER, s));
-                        }
-                    }
+        let (ext, grammar) = get_file_arg_ext(args.clone());
+        if !grammar.is_empty() {
+            let grammar_file = PathBuf::from(format!("{}/lib/{}/{}.txl", FOLDER, grammar, ext));
+            if grammar_file.exists() {
+                my_args.push("-i".to_string());
+                my_args.push(format!("{}/lib/{}/", FOLDER, grammar));
+            } else {
+                let grammar_file =
+                    PathBuf::from(format!("{}/lib/{}/Txl/{}.txl", FOLDER, grammar, ext));
+                if grammar_file.exists() {
+                    my_args.push("-i".to_string());
+                    my_args.push(format!("{}/lib/{}/Txl/", FOLDER, grammar));
                 }
             }
         }
@@ -78,8 +98,18 @@ pub fn txl(args: Vec<String>) -> Result<String, Error> {
                                 } else {
                                     txl(my_args)
                                 }
-                            } else {
+                            } else if s0.is_empty() {
                                 Ok(s)
+                            } else {
+                                if let Ok(re) = Regex::new(".*: TXL(.*)E.*") {
+                                    if re.is_match(&s0) {
+                                        Err(Error::new(ErrorKind::Other, s0))
+                                    } else {
+                                        Ok(s)
+                                    }
+                                } else {
+                                    Ok(s)
+                                }
                             }
                         } else {
                             Ok(s)
@@ -127,16 +157,14 @@ pub fn txl(args: Vec<String>) -> Result<String, Error> {
     }
 }
 
-fn download(lang: &str) -> Result<String, Error> {
-    let grammar;
-    let mut grammar_name = "";
+fn lang_to_grammar(lang: &str) -> &str {
+    let mut grammar = lang;
     match lang {
         "atl" => {
             grammar = "ATL";
         }
         "ada" => {
             grammar = "Ada";
-            grammar_name = "Ada_grammar";
         }
         "c" => {
             grammar = "C18";
@@ -170,7 +198,6 @@ fn download(lang: &str) -> Result<String, Error> {
         }
         "php" => {
             grammar = "PHP";
-            grammar_name = "PHP345";
         }
         "py" => {
             grammar = "Python";
@@ -195,13 +222,36 @@ fn download(lang: &str) -> Result<String, Error> {
         }
         "y" => {
             grammar = "Yacc";
+        }
+        _ => {
+            grammar = "unsupported";
+        }
+    };
+    grammar
+}
+
+fn download(lang: &str) -> Result<String, Error> {
+    let grammar = lang_to_grammar(lang);
+    let mut grammar_name;
+    match lang {
+        "ada" => {
+            grammar_name = "Ada_grammar";
+        }
+        "php" => {
+            grammar_name = "PHP345";
+        }
+        "y" => {
             grammar_name = "YAXX";
         }
         _ => {
-            return Err(Error::new(
-                ErrorKind::Other,
-                format!("{lang} is not supported"),
-            ))
+            if lang_to_grammar(lang) == "unsupported" {
+                return Err(Error::new(
+                    ErrorKind::Other,
+                    format!("{lang} is not supported"),
+                ))
+            } else {
+                grammar_name = grammar;
+            }
         }
     }
     if grammar_name.is_empty() {
