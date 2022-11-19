@@ -45,7 +45,7 @@ fn main() {
 
 ## Updates
 - [x] Integrate with Rust
-- [ ] make it platform independent
+- [x] make it platform independent
 - [ ] Publish the crate
 - [ ] adaptively downlad relevant parser packages 
 - [ ] implement transformations as clippy fix rules

@@ -13,14 +13,20 @@ use tar::Archive;
 const FOLDER: &str = "txl10.8b.macosx64";
 #[cfg(target_os = "macos")]
 const URL: &str = "http://txl.ca/download/11206-txl10.8b.macosx64.tar.gz";
+#[cfg(target_os = "macos")]
+const EXE: &str = "";
 #[cfg(target_os = "linux")]
 const FOLDER: &str = "txl10.8b.linux64";
 #[cfg(target_os = "linux")]
 const URL: &str = "http://www.txl.ca/download/13483-txl10.8b.linux64.tar.gz";
+#[cfg(target_os = "linux")]
+const EXE: &str = "";
 #[cfg(target_os = "windows")]
 const FOLDER: &str = "Txl108bwin64";
 #[cfg(target_os = "windows")]
-const URL: &str = "http://txl.ca/download/22531-txl10.8b.mingw64.tar.gz";
+const URL: &str = "http://txl.ca/download/11888-Txl108bwin64.zip";
+#[cfg(target_os = "windows")]
+const EXE: &str = ".exe";
 
 #[cfg(all())]
 /// .
@@ -30,12 +36,12 @@ const URL: &str = "http://txl.ca/download/22531-txl10.8b.mingw64.tar.gz";
 /// This function will return an error if the txl command is not found.
 pub fn txl(args: Vec<String>) -> Result<String, Error> {
     let mut my_args = args.clone();
-    let cmd = format!("{FOLDER}/bin/txl");
+    let cmd = format!("{FOLDER}/bin/txl{EXE}");
     if Path::new(&cmd).exists() {
         my_args.push("-i".to_string());
         my_args.push(format!("{}/lib/Rust", FOLDER));
     }
-    // println!("{cmd}");
+    println!("{FOLDER}");
     if let Ok(command) = Command::new(cmd)
         .args(&my_args)
         .stdout(Stdio::piped())
@@ -58,11 +64,16 @@ pub fn txl(args: Vec<String>) -> Result<String, Error> {
         if let Ok(resp) =
             reqwest::blocking::get(URL)
         {
-            // println!("{:?}", resp);
             if let Ok(bytes) = resp.bytes() {
-                let tar = GzDecoder::new(&bytes[..]);
-                let mut archive = Archive::new(tar);
-                archive.unpack(".")?;
+                if URL.ends_with(".tar.gz") {
+                    let tar = GzDecoder::new(&bytes[..]);
+                    let mut archive = Archive::new(tar);
+                    archive.unpack(".")?;
+                } else {
+                    let reader = std::io::Cursor::new(bytes);
+                    let mut zip = zip::ZipArchive::new(reader)?;
+                    zip.extract(".").ok();
+                }
                 if let Ok(path) = env::var("PATH") {
                     env::set_var(
                         "PATH",
