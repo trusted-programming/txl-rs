@@ -9,18 +9,31 @@ use std::{
 use flate2::read::GzDecoder;
 use tar::Archive;
 
+#[cfg(target_os = "macos")]
+const FOLDER: &str = "txl10.8b.macosx64";
+#[cfg(target_os = "macos")]
+const URL: &str = "http://txl.ca/download/11206-txl10.8b.macosx64.tar.gz";
+#[cfg(target_os = "linux")]
+const FOLDER: &str = "txl10.8b.linux64";
+#[cfg(target_os = "linux")]
+const URL: &str = "http://www.txl.ca/download/13483-txl10.8b.linux64.tar.gz";
+#[cfg(target_os = "windows")]
+const FOLDER: &str = "Txl108bwin64";
+#[cfg(target_os = "windows")]
+const URL: &str = "http://txl.ca/download/22531-txl10.8b.mingw64.tar.gz";
+
+#[cfg(all())]
 /// .
 ///
 /// # Errors
 ///
 /// This function will return an error if the txl command is not found.
 pub fn txl(args: Vec<String>) -> Result<String, Error> {
-    let mut cmd = "txl";
     let mut my_args = args.clone();
-    if Path::new("txl10.8b.linux64/bin/txl").exists() {
-        cmd = "txl10.8b.linux64/bin/txl";
+    let cmd = format!("{FOLDER}/bin/txl");
+    if Path::new(&cmd).exists() {
         my_args.push("-i".to_string());
-        my_args.push("txl10.8b.linux64/lib/Rust".to_string());
+        my_args.push(format!("{}/lib/Rust", FOLDER));
     }
     // println!("{cmd}");
     if let Ok(command) = Command::new(cmd)
@@ -43,7 +56,7 @@ pub fn txl(args: Vec<String>) -> Result<String, Error> {
     } else {
         println!("txl not found, downlading...");
         if let Ok(resp) =
-            reqwest::blocking::get("http://www.txl.ca/download/13483-txl10.8b.linux64.tar.gz")
+            reqwest::blocking::get(URL)
         {
             // println!("{:?}", resp);
             if let Ok(bytes) = resp.bytes() {
@@ -53,7 +66,7 @@ pub fn txl(args: Vec<String>) -> Result<String, Error> {
                 if let Ok(path) = env::var("PATH") {
                     env::set_var(
                         "PATH",
-                        format!("{:?}/txl10.8b.linux64:{path}", env::current_dir()),
+                        format!("{:?}/{}/bin:{path}", env::current_dir(), FOLDER),
                     );
                 }
                 if let Ok(resp) =
@@ -62,7 +75,7 @@ pub fn txl(args: Vec<String>) -> Result<String, Error> {
                     if let Ok(bytes) = resp.bytes() {
                         let tar = GzDecoder::new(&bytes[..]);
                         let mut archive = Archive::new(tar);
-                        archive.unpack("txl10.8b.linux64/lib")?;
+                        archive.unpack(format!("{}/lib", FOLDER))?;
                     }
                 }
                 txl(args)
