@@ -7,7 +7,7 @@ license = "Apache-2.0 OR MIT"
 repository = "https://github.com/yijunyu/txl-rs"
 homepage = "https://github.com/yijunyu/txl-rs"
 documentation = "https://docs.rs/txl-rs"
-keywords = ["parser", "transformation systems"]
+keywords = ["parser", "transformation-systems"]
 readme = "README.md"
 description = "Wrapper of txl for Rust"
 
