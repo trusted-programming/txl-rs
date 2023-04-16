@@ -14,7 +14,7 @@ cargo install txl-rs
 Install the library:
 ```toml
 [dependencies]
-txl-rs = "0.0.1"
+txl-rs = "0.0.3"
 ```
 
 ## Usage
@@ -30,7 +30,7 @@ which would run as if it is a `txl [args]` command.
 use txl_rs::txl;
 
 fn main() {
-    match txl(["src/main.rs"]) {
+    match txl(["src/main.rs".to_string()].to_vec()) {
         Ok(result) => {
             println!("{result}");
         }
